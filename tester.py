@@ -1,3 +1,9 @@
+"""
+B - batch_size
+C - channels = 3
+(H, W) = SHAPE of img
+F - FEATURE_SIZE
+"""
 import torch
 import cv2
 import numpy as np
@@ -5,50 +11,58 @@ import os
 from pytorch_metric_learning import distances
 from PIL import Image
 from torchvision.transforms import ToTensor
-# import hdbscan
 from sklearn.cluster import DBSCAN
 from sklearn import neighbors
+from typing import Tuple, List
 
 
 def gif_from_folder(folder, save_path='result.gif', duration=1000):
   files = os.listdir(folder)
   files = sorted(files, key=lambda x: int(x.split('.')[0]))
-  # Список для хранения кадров.
+  ## Список для хранения кадров.
   frames = []
 
   for file in files:
-    # Открываем изображение каждого кадра.
+    ## Открываем изображение каждого кадра.
     frame = Image.open(os.path.join(folder, file))
-    # Добавляем кадр в список с кадрами.
+    ## Добавляем кадр в список с кадрами.
     frames.append(frame)
-
-  # Берем первый кадр и в него добавляем оставшееся кадры.
+  ## Берем первый кадр и в него добавляем оставшееся кадры.
   frames[0].save(
     save_path,
     save_all=True,
-    append_images=frames[1:],  # Срез который игнорирует первый кадр.
+    append_images=frames[1:],  ## Срез который игнорирует первый кадр.
     optimize=True,
     duration=duration,
     loop=0
   )
 
 
-def get_ref(vectors_map, ref_vector):
-  # print(out1.shape, out2.shape)
-  # ref_vector = out1[y,x]
-  # print(ref_vector)
-  reshape_target = vectors_map.reshape(-1, vectors_map.shape[-1])
-  dist = distances.CosineSimilarity()(torch.tensor(reshape_target), torch.tensor(ref_vector).unsqueeze(0)).detach().cpu().numpy()
-  # dist = torch.nn.MSELoss(reduction='none')(torch.tensor(reshape_target),
-  #                                     torch.tensor(ref_vector).unsqueeze(0)).mean(dim=-1).detach().cpu().numpy()
-  # print(reshape_target.shape)
-  # dist2 = KMeans(n_clusters=5).fit_predict(dist2)
-  # print(dist2.shape)
+def get_ref(vectors_map: np.array, ref_vector: np.array) -> np.array:
+  '''
+  Arguments:
+
+  vectors_map - np array (H, W, F)
+  ref_vector - np array (F)
+
+  Returns:
+  dist - np array (H, W) - cosine dist between each vec in vectors_map and ref_vector
+  '''
+  reshape_target = vectors_map.reshape(-1, vectors_map.shape[-1])    # (H*W, F)
+  dist = distances.CosineSimilarity()(torch.tensor(reshape_target), torch.tensor(ref_vector).unsqueeze(0)).detach().cpu().numpy()    # (H*W, 1)
   dist = dist.reshape((vectors_map.shape[0], vectors_map.shape[1]))
   return dist
 
 
 def plot_text(image, text):
+  '''
+  Arguments:
+  image - np array (H, W, C)
+  text - str
+
+  Returns:
+  image - np array(H, W, C) - img with text
+  '''
   font = cv2.FONT_HERSHEY_SIMPLEX
   org = (50, 50)
   fontScale = 1
@@ -93,9 +107,12 @@ class Tester:
     self.run_every = run_every
     self.iter = 0
     self._real_iter = 0
-    self.imgs = self.read_images(self.images_paths)
+    self.imgs = self.read_images(self.images_paths)    # torch.FloatTensor (B, C, H, W)
 
-  def read_images(self, images_paths):
+  def read_images(self, images_paths: str) -> torch.FloatTensor:
+    '''
+    create images - torch.FloatTensor (B, C, H, W) - tensor of images from images_paths
+    '''
     images = []
     for image_path in images_paths:
       im = cv2.imread(image_path)
@@ -105,54 +122,46 @@ class Tester:
     images = torch.cat(images, dim=0)
     return images
 
-  def predict(self, imgs):
+  def predict(self, imgs: torch.FloatTensor) -> np.array:
     with torch.no_grad():
-      outs = self.model(imgs.to(self.device)).detach().cpu().numpy()
+      outs = self.model(imgs.to(self.device)).detach().cpu().numpy() # np.array (B, F, H, W)
     return outs
 
-  def plot_predicts(self, imgs, outs):
-    out_np = np.moveaxis(outs, 1, -1)
-    x = int(self.x * imgs.shape[3])
+  def plot_predicts(self, imgs: torch.FloatTensor, outs: np.ndarray) -> List[np.array]:
+    '''
+    Argumets: 
+    imgs - torch.FloatTensor (B, C, H, W)
+    outs - torch.FloatTensor (B, F, H, W)
+
+    Returns: 
+    pims - list of (im), where im - np.array (H*2, W, C) dtype = uint8
+    '''
+    out_np = np.moveaxis(outs, 1, -1)    # np array (B, H, W, F), dtype=float32
+    x = int(self.x * imgs.shape[3]) 
     y = int(self.y * imgs.shape[2])
     pims = []
-    for b in range(len(imgs)):
-      pim = (imgs[b].permute(1, 2, 0).detach().cpu().numpy() * 255).astype('uint8').copy()
+    for b, im in enumerate(imgs):    # im - (C, H, W)
+      pim = (im.permute(1, 2, 0).detach().cpu().numpy() * 255).astype('uint8').copy()    # np array (H, W, C), dtype=uint8
       if b == self.target_b:
-        pim = cv2.circle(pim.copy(), (x, y), self.radius, (255, 0, 0), 3)
-      dist = get_ref(out_np[b], out_np[self.target_b, y, x])
-
-      # dist = dist / np.max(dist)
-      # dist = 1 - dist
-      # size = 15
-      # filter_mask = -np.ones((size, size))
-      # filter_mask[size//2, size//2] = size**2 - 1
-      # dist = cv2.filter2D(dist, -1, filter_mask)
+        pim = cv2.circle(pim.copy(), (x, y), self.radius, (255, 0, 0), 3)    # draws a circle with center at (x, y) and radius r on a target_img
+      dist = get_ref(out_np[b], out_np[self.target_b, y, x])    # (H, W)
       min_val = np.min(dist)
       max_val = np.max(dist)
       dist = (dist-min_val)/(max_val-min_val)
-      # print(dist.max(), dist.min())
-      mask = (dist > self.threshold).astype('uint8')
-      # mask = (dist < self.threshold).astype('uint8')
-
-      # dist = dist * mask
-      # dist = dist - self.threshold
-      # dist[dist < 0] = 0
-      # dist = dist/dist.max()
-
+      mask = (dist > self.threshold)    # if (dist > self.threshold)=True, then mask=1, else mask=0
+      mask = mask.astype('uint8')    # mask - np array (H, W), dtype=uint8
       cntrs, _ = cv2.findContours(mask, 0, 1)
-      cv2.drawContours(pim, cntrs, -1, (0, 0, 255), 3)
-      # dist = np.clip(dist, -1, 1)
-      # dist = (dist + 1) / 2
+      cv2.drawContours(pim, cntrs, -1, (0, 0, 255), 3)    # draw contour on current image using a mask
       dist = (dist * 255).astype('uint8')
-      dist = cv2.cvtColor(dist, cv2.COLOR_GRAY2BGR)
+      dist = cv2.cvtColor(dist, cv2.COLOR_GRAY2BGR)    # (H, W, C)
       pim = cv2.cvtColor(pim, cv2.COLOR_BGR2RGB)
-      pim = np.concatenate([pim, dist], axis=0)
+      pim = np.concatenate([pim, dist], axis=0)    # (H*2, W, C)
       if self.plot_index:
         pim = plot_text(pim, str(self.iter))
       pims.append(pim)
     return pims
 
-  def save_results(self, pims):
+  def save_results(self, pims: List[np.array]):
     for b in range(len(self.imgs)):
       b_name = os.path.split(self.images_paths[b].split('.')[0])[-1]
       folder_path = os.path.join(self.save_folder, b_name)
@@ -165,10 +174,10 @@ class Tester:
       )
 
   def test(self):
-    if self._real_iter % self.run_every == 0:
+    if self._real_iter % self.run_every == 0: # for every 500 do
       outs = self.predict(self.imgs)
       pims = self.plot_predicts(self.imgs, outs)
-      self.save_results(pims)
+      self.save_results(pims)  
       self.iter += 1
     self._real_iter += 1
 
