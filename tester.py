@@ -16,58 +16,23 @@ from sklearn import neighbors
 from typing import Tuple, List
 
 
-def gif_from_folder(folder, save_path='result.gif', duration=1000):
-  files = os.listdir(folder)
-  files = sorted(files, key=lambda x: int(x.split('.')[0]))
-  ## Список для хранения кадров.
-  frames = []
-
-  for file in files:
-    ## Открываем изображение каждого кадра.
-    frame = Image.open(os.path.join(folder, file))
-    ## Добавляем кадр в список с кадрами.
-    frames.append(frame)
-  ## Берем первый кадр и в него добавляем оставшееся кадры.
-  frames[0].save(
-    save_path,
-    save_all=True,
-    append_images=frames[1:],  ## Срез который игнорирует первый кадр.
-    optimize=True,
-    duration=duration,
-    loop=0
-  )
-
-
-def get_ref(vectors_map: np.array, ref_vector: np.array) -> np.array:
+def plot_text(image: np.ndarray, text: str) -> np.ndarray:
   '''
   Arguments:
-
-  vectors_map - np array (H, W, F)
-  ref_vector - np array (F)
-
-  Returns:
-  dist - np array (H, W) - cosine dist between each vec in vectors_map and ref_vector
-  '''
-  reshape_target = vectors_map.reshape(-1, vectors_map.shape[-1])    # (H*W, F)
-  dist = distances.CosineSimilarity()(torch.tensor(reshape_target), torch.tensor(ref_vector).unsqueeze(0)).detach().cpu().numpy()    # (H*W, 1)
-  dist = dist.reshape((vectors_map.shape[0], vectors_map.shape[1]))
-  return dist
-
-
-def plot_text(image, text):
-  '''
-  Arguments:
-  image - np array (H, W, C)
+  image - np.ndarray (H, W, C)
   text - str
 
   Returns:
-  image - np array(H, W, C) - img with text
+  image - np.ndarray(H, W, C) - image with text
   '''
+  H, W, _ = image.shape
+  sc = 0.2    # scaling by coordinates
+  max_shape_of_image = 256
+  org = (round(sc*H), round(sc*W))
   font = cv2.FONT_HERSHEY_SIMPLEX
-  org = (50, 50)
-  fontScale = 1
+  fontScale = H/max_shape_of_image
   color = (0, 0, 255)
-  thickness = 2
+  thickness = 1 + round(H/max_shape_of_image)
   image = cv2.putText(image, text, org, font, fontScale,
                       color, thickness, cv2.LINE_AA, False)
   return image
@@ -109,6 +74,23 @@ class Tester:
     self._real_iter = 0
     self.imgs = self.read_images(self.images_paths)    # torch.FloatTensor (B, C, H, W)
 
+
+  def get_ref(self, vectors_map: np.ndarray, ref_vector: np.ndarray) -> np.ndarray:
+    '''
+    Arguments:
+
+    vectors_map - np.ndarray (H, W, F)
+    ref_vector - np.ndarray (F)
+
+    Returns:
+    dist - np.ndarray (H, W) - cosine dist between each vec in vectors_map and ref_vector
+    '''
+    reshape_target = vectors_map.reshape(-1, vectors_map.shape[-1])    # (H*W, F)
+    dist = distances.CosineSimilarity()(torch.tensor(reshape_target), torch.tensor(ref_vector).unsqueeze(0)).detach().cpu().numpy()    # (H*W, 1)
+    dist = dist.reshape((vectors_map.shape[0], vectors_map.shape[1]))
+    return dist
+
+
   def read_images(self, images_paths: str) -> torch.FloatTensor:
     '''
     create images - torch.FloatTensor (B, C, H, W) - tensor of images from images_paths
@@ -122,12 +104,14 @@ class Tester:
     images = torch.cat(images, dim=0)
     return images
 
-  def predict(self, imgs: torch.FloatTensor) -> np.array:
+
+  def predict(self, imgs: torch.FloatTensor) -> np.ndarray:
     with torch.no_grad():
-      outs = self.model(imgs.to(self.device)).detach().cpu().numpy() # np.array (B, F, H, W)
+      outs = self.model(imgs.to(self.device)).detach().cpu().numpy() # np.ndarray (B, F, H, W)
     return outs
 
-  def plot_predicts(self, imgs: torch.FloatTensor, outs: np.ndarray) -> List[np.array]:
+
+  def plot_predicts(self, imgs: torch.FloatTensor, outs: np.ndarray) -> List[np.ndarray]:
     '''
     Argumets: 
     imgs - torch.FloatTensor (B, C, H, W)
@@ -136,20 +120,20 @@ class Tester:
     Returns: 
     pims - list of (im), where im - np.array (H*2, W, C) dtype = uint8
     '''
-    out_np = np.moveaxis(outs, 1, -1)    # np array (B, H, W, F), dtype=float32
+    out_np = np.moveaxis(outs, 1, -1)    # np.ndarray (B, H, W, F), dtype=float32
     x = int(self.x * imgs.shape[3]) 
     y = int(self.y * imgs.shape[2])
     pims = []
     for b, im in enumerate(imgs):    # im - (C, H, W)
-      pim = (im.permute(1, 2, 0).detach().cpu().numpy() * 255).astype('uint8').copy()    # np array (H, W, C), dtype=uint8
+      pim = (im.permute(1, 2, 0).detach().cpu().numpy() * 255).astype('uint8').copy()    # np.ndarray (H, W, C), dtype=uint8
       if b == self.target_b:
         pim = cv2.circle(pim.copy(), (x, y), self.radius, (255, 0, 0), 3)    # draws a circle with center at (x, y) and radius r on a target_img
-      dist = get_ref(out_np[b], out_np[self.target_b, y, x])    # (H, W)
+      dist = self.get_ref(out_np[b], out_np[self.target_b, y, x])    # (H, W)
       min_val = np.min(dist)
       max_val = np.max(dist)
       dist = (dist-min_val)/(max_val-min_val)
       mask = (dist > self.threshold)    # if (dist > self.threshold)=True, then mask=1, else mask=0
-      mask = mask.astype('uint8')    # mask - np array (H, W), dtype=uint8
+      mask = mask.astype('uint8')    # mask - np.ndarray (H, W), dtype=uint8
       cntrs, _ = cv2.findContours(mask, 0, 1)
       cv2.drawContours(pim, cntrs, -1, (0, 0, 255), 3)    # draw contour on current image using a mask
       dist = (dist * 255).astype('uint8')
@@ -157,23 +141,25 @@ class Tester:
       pim = cv2.cvtColor(pim, cv2.COLOR_BGR2RGB)
       pim = np.concatenate([pim, dist], axis=0)    # (H*2, W, C)
       if self.plot_index:
-        pim = plot_text(pim, str(self.iter))
+        pim = plot_text(pim, str(self.iter))   # add text to image
       pims.append(pim)
     return pims
 
-  def save_results(self, pims: List[np.array]):
+
+  def save_results(self, pims: List[np.ndarray]):
     for b in range(len(self.imgs)):
       b_name = os.path.split(self.images_paths[b].split('.')[0])[-1]
       folder_path = os.path.join(self.save_folder, b_name)
       os.makedirs(folder_path, exist_ok=True)
       cv2.imwrite(os.path.join(folder_path, str(self.iter) + '.jpg'), pims[b])
-      gif_from_folder(
-        folder_path,
-        save_path=os.path.join(self.save_folder, b_name + '.gif'),
-        duration=self.gif_duration,
-      )
+
 
   def test(self):
+    '''
+    pictures run through the model, 
+    in each picture we take a vector and compare it with the rest, draw all similar pixels in the picture,
+    save the result
+    '''
     if self._real_iter % self.run_every == 0: # for every 500 do
       outs = self.predict(self.imgs)
       pims = self.plot_predicts(self.imgs, outs)
