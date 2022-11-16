@@ -13,7 +13,7 @@ from train_old import TrainStep, TrainStepLossTrain, ValStep
 from losses import PixelWiseLossWithMeanVector, PixelWiseLossWithVectors
 from datasets.ade20k import get_ade20k
 from datasets.cocostaff import get_cocostaff
-from tester import Tester
+from tester import DistanceTester
 
 
 if __name__ == '__main__':
@@ -107,7 +107,7 @@ if __name__ == '__main__':
     os.makedirs(RESULT_PATH, exist_ok=True)
     last_metric = None
 
-    tester_cars = Tester(
+    tester_cars = DistanceTester(
         model,
         images_paths=sorted(glob.glob('data/test_images/cars/*')),
         x=0.2, y=0.4,
@@ -120,7 +120,7 @@ if __name__ == '__main__':
         device=DEVICE,
     )
 
-    tester_cats = Tester(
+    tester_cats = DistanceTester(
         model,
         images_paths=sorted(glob.glob('data/test_images/cats/*')),
         x=0.4, y=0.6,
@@ -133,7 +133,7 @@ if __name__ == '__main__':
         device=DEVICE,
     )
 
-    tester_fish = Tester(
+    tester_fish = DistanceTester(
         model,
         images_paths=sorted(glob.glob('data/test_images/fish/*')),
         x=0.7, y=0.7,

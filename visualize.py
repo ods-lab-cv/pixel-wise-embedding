@@ -7,29 +7,29 @@ import numpy as np
 import argparse
 
 
-from tester import Tester, DBSCANTester
+from tester import DistanceTester, PCATester
 
 
 class Visualizer:
     def __init__(self, model, images_paths, image_size=256, threshold=0.9, device='cuda'):
         self.image_size = image_size
-        self.tester = Tester(
+        self.tester = PCATester(
             model=model,
             images_paths=images_paths,
-            x=0.5,
-            y=0.5,
-            target_b=0,
+            # x=0.5,
+            # y=0.5,
+            # target_b=0,
             save_folder=None,
-            threshold=threshold,
+            # threshold=threshold,
             transforms=A.Resize(self.image_size, self.image_size),
             device=device,
-            plot_index=False,
+            # plot_index=False,
         )
 
         self.fig, self.axs = plt.subplots(figsize=(16, 16))
         # self.hist_fig, self.hist_axs = plt.subplots(figsize=(8, 8))
 
-        cid = self.fig.canvas.mpl_connect('button_press_event', self.onclick)
+        # cid = self.fig.canvas.mpl_connect('button_press_event', self.onclick)
 
         self.outs = self.tester.predict(self.tester.imgs)
         pims = self.tester.plot_predicts(self.tester.imgs, self.outs)
@@ -40,25 +40,25 @@ class Visualizer:
 
         plt.show()
 
-    def onclick(self, event):
-        if event.ydata is not None and event.xdata is not None:
-            if event.ydata < self.image_size:
-                target_b = int(event.xdata // self.image_size)
-                self.tester.target_b = target_b
-                self.tester.x = event.xdata / self.image_size - target_b
-                self.tester.y = event.ydata / self.image_size
-                pims = self.tester.plot_predicts(self.tester.imgs, self.outs)
-                pim = np.concatenate(pims, axis=1)
-                self.axs.imshow(pim)
-                self.fig.canvas.draw()
-                # self.hist_axs.hist(pim[pim.shape[0] // 2:].flatten(), bins=256, log=True, alpha=0.5)
-                # self.hist_fig.canvas.draw()
+    # def onclick(self, event):
+    #     if event.ydata is not None and event.xdata is not None:
+    #         if event.ydata < self.image_size:
+    #             target_b = int(event.xdata // self.image_size)
+    #             self.tester.target_b = target_b
+    #             self.tester.x = event.xdata / self.image_size - target_b
+    #             self.tester.y = event.ydata / self.image_size
+    #             pims = self.tester.plot_predicts(self.tester.imgs, self.outs)
+    #             pim = np.concatenate(pims, axis=1)
+    #             self.axs.imshow(pim)
+    #             self.fig.canvas.draw()
+    #             # self.hist_axs.hist(pim[pim.shape[0] // 2:].flatten(), bins=256, log=True, alpha=0.5)
+    #             # self.hist_fig.canvas.draw()
 
 
 parser = argparse.ArgumentParser(description='Vizualizer for pixel-wise-embeddings')
 parser.add_argument('--model_path', type=str, default='weights/pixel_wise_encoder_v3.pt')
-parser.add_argument('--images_path', type=str, default='data/test_images/cars')
-parser.add_argument('--image_size', type=int, default=256)
+parser.add_argument('--images_path', type=str, default='data/test_images/garden')
+parser.add_argument('--image_size', type=int, default=512)
 parser.add_argument('--threshold', type=float, default=0.8)
 parser.add_argument('--device', type=str, default='cuda')
 
