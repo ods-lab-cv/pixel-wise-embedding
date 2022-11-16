@@ -2,7 +2,7 @@ import torch
 import cv2
 import numpy as np
 import os
-# from pytorch_metric_learning import distances
+from pytorch_metric_learning import distances
 from PIL import Image
 from torchvision.transforms import ToTensor
 from sklearn.decomposition import PCA
@@ -223,13 +223,17 @@ class PCATester(BaseTester):
         self.pca.fit(flatten[::self.pca_every])
         res_flatten = self.pca.transform(flatten)
         res = res_flatten.reshape((*out_np.shape[:-1], 3))
-        std = np.std(res)
-        mean = np.mean(res)
-        left = mean - 3 * std
-        right = mean + 3 * std
-        res = (res - left) / (right - left)
-        res[res < 0] = 0
-        res[res > 1] = 1
+        for channel in range(3):
+            cres = res[:, :, :, channel: channel + 1]
+            std = np.std(cres)
+            mean = np.mean(cres)
+            left = mean - 3 * std
+            right = mean + 3 * std
+            cres = (cres - left) / (right - left)
+            cres[cres < 0] = 0
+            cres[cres > 1] = 1
+            res[:, :, :, channel: channel + 1] = cres
+        # print(res.shape)
         res = res * 255
         res = np.concatenate([pims, res], axis=1).astype('uint8')
 
