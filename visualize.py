@@ -7,23 +7,21 @@ import numpy as np
 import argparse
 
 
-from tester import Tester, DBSCANTester
+from tester import BasePim, DBSCANTester
 
 
 class Visualizer:
     def __init__(self, model, images_paths, image_size=256, threshold=0.9, device='cuda'):
         self.image_size = image_size
-        self.tester = Tester(
+        self.basepim = BasePim(
             model=model,
             images_paths=images_paths,
             x=0.5,
             y=0.5,
             target_b=0,
-            save_folder=None,
             threshold=threshold,
             transforms=A.Resize(self.image_size, self.image_size),
             device=device,
-            plot_index=False,
         )
 
         self.fig, self.axs = plt.subplots(figsize=(16, 16))
@@ -31,8 +29,7 @@ class Visualizer:
 
         cid = self.fig.canvas.mpl_connect('button_press_event', self.onclick)
 
-        self.outs = self.tester.predict(self.tester.imgs)
-        pims = self.tester.plot_predicts(self.tester.imgs, self.outs)
+        pims = self.basepim.plot_predicts()
         pim = np.concatenate(pims, axis=1)
         self.axs.imshow(pim)
 
@@ -44,10 +41,10 @@ class Visualizer:
         if event.ydata is not None and event.xdata is not None:
             if event.ydata < self.image_size:
                 target_b = int(event.xdata // self.image_size)
-                self.tester.target_b = target_b
-                self.tester.x = event.xdata / self.image_size - target_b
-                self.tester.y = event.ydata / self.image_size
-                pims = self.tester.plot_predicts(self.tester.imgs, self.outs)
+                self.basepim.target_b = target_b
+                self.basepim.x = event.xdata / self.image_size - target_b
+                self.basepim.y = event.ydata / self.image_size
+                pims = self.basepim.plot_predicts()
                 pim = np.concatenate(pims, axis=1)
                 self.axs.imshow(pim)
                 self.fig.canvas.draw()
@@ -56,7 +53,7 @@ class Visualizer:
 
 
 parser = argparse.ArgumentParser(description='Vizualizer for pixel-wise-embeddings')
-parser.add_argument('--model_path', type=str, default='weights/pixel_wise_encoder_v3.pt')
+parser.add_argument('--model_path', type=str, default='weights/pixel_wise_encoder_v14.pt')
 parser.add_argument('--images_path', type=str, default='data/test_images/cars')
 parser.add_argument('--image_size', type=int, default=256)
 parser.add_argument('--threshold', type=float, default=0.8)
@@ -66,15 +63,15 @@ parser.add_argument('--device', type=str, default='cuda')
 if __name__ == '__main__':
     args = parser.parse_args()
 
-    # FEATURES_SIZE = 64
-    # model = smp.FPN(
-    #     'efficientnet-b0',
-    #     classes=FEATURES_SIZE,
-    #     activation=None,
-    #     decoder_segmentation_channels=FEATURES_SIZE * 2,
-    #     decoder_pyramid_channels=FEATURES_SIZE * 2,
-    #     encoder_weights=None,ss
-    # )
+    #FEATURES_SIZE = 64
+    #model = smp.FPN(
+    #    'efficientnet-b0',
+    #    classes=FEATURES_SIZE,
+    #    activation=None,
+    #    decoder_segmentation_channels=FEATURES_SIZE * 2,
+    #    decoder_pyramid_channels=FEATURES_SIZE * 2,
+    #    encoder_weights=None
+    #)
     # model.load_state_dict(torch.load(args.model_path, map_location='cpu'))
     model = torch.load(args.model_path, map_location=args.device)
     model.eval()
