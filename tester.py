@@ -37,8 +37,7 @@ def plot_text(image: np.ndarray, text: str) -> np.ndarray:
                       color, thickness, cv2.LINE_AA, False)
   return image
 
-
-class Tester:
+class BasePim:
   def __init__(
           self,
           model,
@@ -46,15 +45,14 @@ class Tester:
           x,
           y,
           target_b,
-          save_folder,
           transforms,
           threshold=0.9,
           radius=5,
-          gif_duration=500,
-          run_every=100,
           device='cuda',
-          plot_index=True,
   ):
+
+    super().__init__()
+
     self.model = model
     self.images_paths = images_paths
     self.x = x
@@ -62,18 +60,11 @@ class Tester:
     self.target_b = target_b
     self.transforms = transforms
     self.threshold = threshold
-    self.gif_duration = gif_duration
     self.radius = radius
-    self.plot_index = plot_index
-
-    self.save_folder = save_folder
     self.device = device
 
-    self.run_every = run_every
-    self.iter = 0
-    self._real_iter = 0
     self.imgs = self.read_images(self.images_paths)    # torch.FloatTensor (B, C, H, W)
-
+  
 
   def get_ref(self, vectors_map: np.ndarray, ref_vector: np.ndarray) -> np.ndarray:
     '''
@@ -89,7 +80,7 @@ class Tester:
     dist = distances.CosineSimilarity()(torch.tensor(reshape_target), torch.tensor(ref_vector).unsqueeze(0)).detach().cpu().numpy()    # (H*W, 1)
     dist = dist.reshape((vectors_map.shape[0], vectors_map.shape[1]))
     return dist
-
+  
 
   def read_images(self, images_paths: str) -> torch.FloatTensor:
     '''
@@ -111,20 +102,19 @@ class Tester:
     return outs
 
 
-  def plot_predicts(self, imgs: torch.FloatTensor, outs: np.ndarray) -> List[np.ndarray]:
+  def pims_and_dists(self):
     '''
-    Argumets: 
-    imgs - torch.FloatTensor (B, C, H, W)
-    outs - torch.FloatTensor (B, F, H, W)
-
     Returns: 
-    pims - list of (im), where im - np.array (H*2, W, C) dtype = uint8
+    pims - List of (np.ndarray (H, W, C), dtype=uint8), len(pims) = B 
+    dists - List of (np.ndarray (H, W, C), dtype=uint8), len(dists) = B  
     '''
+    outs = self.predict(self.imgs)    # torch.FloatTensor (B, F, H, W)
     out_np = np.moveaxis(outs, 1, -1)    # np.ndarray (B, H, W, F), dtype=float32
-    x = int(self.x * imgs.shape[3]) 
-    y = int(self.y * imgs.shape[2])
+    x = int(self.x * self.imgs.shape[3]) 
+    y = int(self.y * self.imgs.shape[2])
     pims = []
-    for b, im in enumerate(imgs):    # im - (C, H, W)
+    dists = []
+    for b, im in enumerate(self.imgs):    # im - (C, H, W)
       pim = (im.permute(1, 2, 0).detach().cpu().numpy() * 255).astype('uint8').copy()    # np.ndarray (H, W, C), dtype=uint8
       if b == self.target_b:
         pim = cv2.circle(pim.copy(), (x, y), self.radius, (255, 0, 0), 3)    # draws a circle with center at (x, y) and radius r on a target_img
@@ -139,10 +129,72 @@ class Tester:
       dist = (dist * 255).astype('uint8')
       dist = cv2.cvtColor(dist, cv2.COLOR_GRAY2BGR)    # (H, W, C)
       pim = cv2.cvtColor(pim, cv2.COLOR_BGR2RGB)
-      pim = np.concatenate([pim, dist], axis=0)    # (H*2, W, C)
+      pims.append(pim)
+      dists.append(dist)
+    return pims, dists
+
+
+  def plot_predicts(self) -> List[np.ndarray]:
+    '''
+    build list from concatenated pim and dist
+
+    Return: 
+    _pims - List of (np.ndarray (2*H, W, C), dtype=uint8), len(_pims) = B
+    '''
+    _pims = []
+    pims, dists = self.pims_and_dists()
+    for pim, dist in zip(pims, dists):
+      _pim = np.concatenate([pim, dist], axis=0)    # (H*2, W, C)
+      _pims.append(_pim)
+    return _pims
+
+
+class Tester(BasePim):
+  def __init__(
+          self, 
+          save_folder,
+          model,
+          images_paths,
+          x,
+          y,
+          target_b,
+          transforms,
+          threshold=0.9,
+          radius=5,
+          device='cuda',
+          plot_index=True, 
+          run_every=100, 
+          ):
+    super().__init__(
+      model = model, 
+      images_paths = images_paths,
+      x = x, 
+      y = y,
+      target_b = target_b,
+      transforms = transforms,
+      threshold = threshold,
+      radius = radius,
+      device = device,
+    )
+    self.imgs = self.read_images(images_paths)    # torch.FloatTensor (B, C, H, W)
+    self.save_folder = save_folder
+    self.plot_index = plot_index
+    self.run_every = run_every
+    self.iter = 0
+    self._real_iter = 0
+
+
+  def plot_predicts(self) -> List[np.ndarray]:
+    '''
+    plot_pred with adding text
+    '''
+    _pims = []
+    pims, dists = self.pims_and_dists()
+    for pim, dist in zip(pims, dists):
       if self.plot_index:
         pim = plot_text(pim, str(self.iter))   # add text to image
-      pims.append(pim)
+      _pim = np.concatenate([pim, dist], axis=0)    # (H*2, W, C)
+      _pims.append(_pim)
     return pims
 
 
@@ -161,8 +213,7 @@ class Tester:
     save the result
     '''
     if self._real_iter % self.run_every == 0: # for every 500 do
-      outs = self.predict(self.imgs)
-      pims = self.plot_predicts(self.imgs, outs)
+      pims = self.plot_predicts()
       self.save_results(pims)  
       self.iter += 1
     self._real_iter += 1
