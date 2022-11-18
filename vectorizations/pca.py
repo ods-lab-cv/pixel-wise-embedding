@@ -21,7 +21,7 @@ class PCAVectorization(BaseVectorization):
         self.pca = PCA(n_components=3)
         self.pca_every = pca_every
 
-    def _normalize(self, vectorization_out):
+    def _normalize(self, vectorization_out: np.ndarray) -> np.ndarray:
         for channel in range(3):
             cres = vectorization_out[:, :, :, channel: channel + 1]
             std = np.std(cres)
@@ -34,7 +34,7 @@ class PCAVectorization(BaseVectorization):
             vectorization_out[:, :, :, channel: channel + 1] = cres
         return vectorization_out
 
-    def _vectorization(self, imgs, outs):
+    def _vectorization(self, imgs: np.ndarray, outs: np.ndarray) -> np.ndarray:
         flatten = outs.reshape(-1, outs.shape[-1])
         self.pca.fit(flatten[::self.pca_every])
         res_flatten = self.pca.transform(flatten)

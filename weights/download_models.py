@@ -14,5 +14,6 @@ def download_model():
     )
 # https://drive.google.com/file/d/1hEnPGKYM0k3QO5WvLUSoEula8rs9tG4J/view?usp=sharing
 
+
 if __name__ == '__main__':
     download_model()

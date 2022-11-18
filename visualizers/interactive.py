@@ -1,14 +1,11 @@
-import matplotlib.pyplot as plt
-import segmentation_models_pytorch as smp
-import torch
-import glob
-import albumentations as A
 import numpy as np
-import argparse
-
+import os
+from matplotlib.backend_bases import MouseEvent
 
 from visualizers.base import BaseVisualizer
 from vectorizations.interactive import InteractiveVectorization
+
+os.environ['KMP_DUPLICATE_LIB_OK'] = str(True)
 
 
 class InteractiveVisualizer(BaseVisualizer):
@@ -18,7 +15,7 @@ class InteractiveVisualizer(BaseVisualizer):
         )
         cid = self.fig.canvas.mpl_connect('button_press_event', self.onclick)
 
-    def onclick(self, event):
+    def onclick(self, event: MouseEvent):
         self.vectorization: InteractiveVectorization
         if event.ydata is not None and event.xdata is not None:
             if event.ydata < self.vectorization.image_size[1]:
@@ -26,7 +23,6 @@ class InteractiveVisualizer(BaseVisualizer):
                 x = event.xdata - target_b * self.vectorization.image_size[0]
                 y = event.ydata
                 self.vectorization.set_pos(x, y, target_b)
-                pims = self.vectorization.vectorization(self.images_paths, always_update=False)
-                pim = np.concatenate(pims, axis=1)
+                pim = self.generate_im(always_update=False)
                 self.axs.imshow(pim)
                 self.fig.canvas.draw()
