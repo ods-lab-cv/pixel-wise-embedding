@@ -10,6 +10,7 @@ from vectorizations.pca import PCAVectorization
 MODEL_PATH = r'C:\Repositories\pixel-wise-embedding\weights\pixel_wise_encoder.pt'
 DATA_PATH = r'C:\Repositories\pixel-wise-embedding\data\test_images\datchiki'
 IMAGE_SIZE = (256, 256)
+PCA_EVERY = 10
 DEVICE = 'cpu'
 
 if __name__ == '__main__':
@@ -18,6 +19,7 @@ if __name__ == '__main__':
         vectorization=PCAVectorization(
             model=model,
             image_size=IMAGE_SIZE,
+            pca_every=PCA_EVERY,
             device=DEVICE,
         )
     )
