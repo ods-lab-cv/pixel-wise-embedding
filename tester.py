@@ -87,6 +87,7 @@ class BaseTester:
         images = []
         for image_path in images_paths:
             im = cv2.imread(image_path)
+            im = cv2.cvtColor(im, cv2.COLOR_BGR2RGB)
             im = self.transforms(image=im)['image']
             im = ToTensor()(im)
             images.append(im.unsqueeze(0))
