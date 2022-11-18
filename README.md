@@ -21,12 +21,6 @@ Best architecture - FPN.
 
 FPN (256 features) - [download_model](https://drive.google.com/file/d/1VcmNGuhh5QbiJXITxnd299c1WUv2oMQ9/view?usp=sharing)
 
-# Vizualize tool
-
-```
-    python .\visualize.py --model_path weights/pixel_wise_encoder.pt --images_path data/test_images/cars --image_size 512 
-```
-
 # Colab
 
 [Colab](https://colab.research.google.com/drive/1YCwRxmGxig1zsxrWkRtz3NR1JDxbVu3q?usp=sharing)
