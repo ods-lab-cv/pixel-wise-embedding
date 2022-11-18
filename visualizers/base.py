@@ -14,7 +14,7 @@ class BaseVisualizer:
         self.images_paths = None
         self.plot_original = None
 
-    def generate_im(self, always_update=True):
+    def generate_im(self, always_update: bool = True):
         outs = self.vectorization.vectorization(self.images_paths, always_update=always_update)
 
         plot_outs = np.concatenate(outs, axis=1)
@@ -28,7 +28,7 @@ class BaseVisualizer:
             pim = plot_outs
         return pim
 
-    def show(self, images_paths: tp.List[str], plot_original=True):
+    def show(self, images_paths: tp.List[str], plot_original: bool = True):
         self.images_paths = images_paths
         self.plot_original = plot_original
         pim = self.generate_im(always_update=True)
