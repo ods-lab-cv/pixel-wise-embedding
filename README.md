@@ -5,6 +5,7 @@ Train embedding vectors for each pixel of image.
 # Results
 ![plot](./docs/imgs/cars_pick_car.png)
 ![plot](./docs/imgs/cars_pick_grass.png)
+![plot](./docs/imgs/cars_pca.png)
 
 # Datasets
 

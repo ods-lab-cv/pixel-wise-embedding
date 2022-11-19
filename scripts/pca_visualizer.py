@@ -7,9 +7,9 @@ from visualizers.base import BaseVisualizer
 from vectorizations.pca import PCAVectorization
 
 
-MODEL_PATH = r'C:\Repositories\pixel-wise-embedding\weights\pixel_wise_encoder.pt'
-DATA_PATH = r'C:\Repositories\pixel-wise-embedding\data\test_images\datchiki'
-IMAGE_SIZE = (256, 256)
+MODEL_PATH = r'C:\Repositories\pixel-wise-embedding\weights\pixel_wise_encoder_v2.pt'
+DATA_PATH = r'C:\Repositories\pixel-wise-embedding\data\test_images\cars'
+IMAGE_SIZE = (512, 512)
 PCA_EVERY = 10
 DEVICE = 'cpu'
 
