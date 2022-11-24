@@ -3,11 +3,9 @@ from torchvision.transforms import ToTensor
 import torch
 import glob
 import os
-import numpy as np
 
 
 from datasets.ade20k_utils import loadAde20K
-from datasets.ade20k_classes import ade20k_class_to_code
 
 
 class ADE20KObjectsDataset:
@@ -24,20 +22,6 @@ class ADE20KObjectsDataset:
         try:
             res = loadAde20K(image_name)
             mask = res['class_mask']
-
-            # mask = np.zeros((image.shape[0], image.shape[1]))
-            #
-            # for i in range(len(data['class'])):
-            #     cur_class = data['class'][i]
-            #     cur_class_idx = ade20k_class_to_code[cur_class] + 1
-            #     cur_poly = data['polygon'][i]
-            #     x = cur_poly['x']
-            #     y = cur_poly['y']
-            #     p = np.stack([x, y], axis=-1)
-            #     p = np.expand_dims(p, 1)
-            #     # p[p < 0] = 0
-            #     # if len(p) > 0:
-            #     cv2.drawContours(mask, [p], -1, cur_class_idx, -1)
         except:
             return self[idx + 1]
         a = self.transforms(image=image, mask=mask)
