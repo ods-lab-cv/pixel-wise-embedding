@@ -31,6 +31,9 @@ from torchvision.transforms import ToTensor
 
 from config import Config
 
+import gzip
+import pickle
+
 RESULT_PATH_MODEL = os.path.join(Config.result_path, 'models')
 BEST_MODEL = os.path.join(RESULT_PATH_MODEL, 'best.pth')
 LAST_MODEL = os.path.join(RESULT_PATH_MODEL, 'last.pth')
