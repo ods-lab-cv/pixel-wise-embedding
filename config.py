@@ -20,6 +20,11 @@ class DiceLossWithPrepare(torch.nn.Module):
         x, y = multiclass_out(x, y)
         return self.dice(x, y)
 
+def multiclass_out(out, mask):
+    out = torch.softmax(out, dim=1)
+    mask = mask.argmax(dim=1)
+    return out, mask
+# Temporary here, because I don't know where it should be imported from
 
 @dataclass
 class BaseConfig:
