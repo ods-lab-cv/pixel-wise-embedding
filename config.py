@@ -3,9 +3,22 @@ import typing as tp
 from train import BaseStep, TrainStep, ValStep
 from train import MODEL_KEY, COLLECTOR_KEY, LOSS_KEY, METRIC_KEY
 from tester import Tester
+from datasets.ade20k import get_ade20k
 import albumentations as A
 import torch
 import os
+import glob
+import segmentation_models_pytorch as smp
+from out_collector import OutCollectorWithSingleConv
+
+# Temporary here, because I don't know where it should be imported from
+class DiceLossWithPrepare(torch.nn.Module):
+    def __init__(self):
+        super(DiceLossWithPrepare, self).__init__()
+        self.dice = smp.losses.DiceLoss('multiclass', from_logits=False)
+    def forward(self, x, y):
+        x, y = multiclass_out(x, y)
+        return self.dice(x, y)
 
 
 @dataclass
