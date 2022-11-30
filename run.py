@@ -1,5 +1,35 @@
-import gzip
-import pickle
+import numpy as np
+from tqdm import tqdm
+from collections import defaultdict
+import os
+import torch
+from torch.utils.data import DataLoader
+import typing as tp
+import segmentation_models_pytorch as smp
+import albumentations as A
+import glob
+
+from train import TrainStep, ValStep
+from datasets.ade20k_classes import ADE20K_CLASSES
+from losses import PixelWiseLossWithMeanVector, PixelWiseLossWithVectorsConvFit
+from out_collector import (
+    OutCollectorWithMeanVector,
+    OutCollectorWithLearningVectors,
+    OutCollectorWithLearningVectorsWithConv,
+    OutCollectorWithSingleConv,
+)
+
+from train import MODEL_KEY, COLLECTOR_KEY, LOSS_KEY, METRIC_KEY
+from metrics import MulticlassAccuracy
+from datasets.ade20k import get_ade20k
+from datasets.cocostaff import get_cocostaff
+from tester import Tester
+
+from pycocotools.coco import COCO
+import cv2
+from torchvision.transforms import ToTensor
+
+from config import Config
 
 RESULT_PATH_MODEL = os.path.join(Config.result_path, 'models')
 BEST_MODEL = os.path.join(RESULT_PATH_MODEL, 'best.pth')

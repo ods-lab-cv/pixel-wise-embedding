@@ -33,7 +33,7 @@ class Config:
     n_classes: int = 3688
     device: str = 'cuda'
     amp: bool = True
-    shape: Tuple[int, int] = (32, 32)
+    shape: tp.Tuple[int, int] = (32, 32)
     batch_size: int = 8
     epochs: int = 1
     backbone: str = 'efficientnet-b0'
