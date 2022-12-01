@@ -37,7 +37,7 @@ class InteractiveVectorization(BaseVectorization):
         for b in range(len(outs)):
             distance = self._out_to_distance(outs[b], outs[self.batch_i, self.y, self.x])
             results.append(distance)
-        return np.stack(results, axis=0)
+        return np.stack(results, axis=0)    #(b, h, w, c)
 
 
 class InteractiveVectorizationCosine(InteractiveVectorization):
