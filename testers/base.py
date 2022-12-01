@@ -31,7 +31,7 @@ class BaseTester:
             b_name = os.path.split(self.images_paths[b].split('.')[0])[-1]
             folder_path = os.path.join(self.save_folder, b_name)
             os.makedirs(folder_path, exist_ok=True)
-            cv2.imwrite(os.path.join(folder_path, str(self.iter) + '.jpg'), pims[b])
+            cv2.imwrite(os.path.join(folder_path, str(self.iter) + '.jpg'), (pims[b]/pims[b].max() * 255))
 
     def test(self):
         if self._real_iter % self.run_every == 0:
